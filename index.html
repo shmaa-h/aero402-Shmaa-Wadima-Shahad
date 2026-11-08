@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="AERO402 front-end supersonic diamond-wedge analysis using shock–expansion theory.">
+  <title>AERO402 — Supersonic Diamond-Wedge Analysis</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#inputs">Skip to input parameters</a>
+<main>
+  <header class="page-header">
+    <div class="course-label">AERO402 <span>COMPRESSIBLE FLOW / COURSE PROJECT</span></div>
+    <h1>AERO402 — Supersonic Diamond-Wedge Analysis</h1>
+    <p class="subtitle">Interactive Shock–Expansion Theory Calculator</p>
+    <p class="description">Two-dimensional supersonic diamond-wedge analysis using oblique-shock and Prandtl–Meyer expansion theory.</p>
+  </header>
+  <noscript><p class="banner failed">JavaScript must be enabled to run the local calculation engine.</p></noscript>
+  <div class="workspace-grid">
+    <section id="inputs" class="card input-card" aria-labelledby="inputsTitle">
+      <div class="section-heading"><h2 id="inputsTitle">Input Parameters</h2><span class="section-tag">01</span></div>
+      <form id="conditions" novalidate>
+        <fieldset>
+          <legend>Freestream Conditions</legend>
+          <div class="fields">
+            <div class="field"><label for="mach">Freestream Mach Number <span>M∞</span></label><input id="mach" type="number" value="2.5" step="0.05" min="1.5" max="5" aria-describedby="mach-range"><small id="mach-range">Dimensionless · supported 1.5–5.0</small></div>
+            <div class="field"><label for="pinf">Freestream Static Pressure <span>p∞ (Pa)</span></label><input id="pinf" type="number" value="101325" step="100" aria-describedby="pinf-range"><small id="pinf-range">Static pressure &gt; 0 Pa</small></div>
+            <div class="field full"><label for="alpha">Angle of Attack <span>α (deg)</span></label><input id="alpha" type="number" value="0" step="0.5" min="-10" max="10" aria-describedby="alpha-range"><small id="alpha-range">Supported −10° to +10°</small></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Wedge Geometry</legend>
+          <div class="fields">
+            <div class="field"><label for="dl">Leading-Edge Half-Angle <span>δL (deg)</span></label><input id="dl" type="number" value="8" step="0.5" min="2" max="15" aria-describedby="dl-range"><small id="dl-range">Supported 2°–15°</small></div>
+            <div class="field"><label for="dt">Trailing-Edge Half-Angle <span>δT (deg)</span></label><input id="dt" type="number" value="8" step="0.5" min="2" max="15" aria-describedby="dt-range"><small id="dt-range">Supported 2°–15°</small></div>
+            <div class="field full"><label for="chord">Chord Length <span>c (m)</span></label><input id="chord" type="number" value="1" step="0.1" aria-describedby="chord-range"><small id="chord-range">Chord &gt; 0 m</small></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Gas Properties</legend>
+          <div class="field"><label for="gamma">Specific-Heat Ratio <span>γ</span></label><input id="gamma" type="number" value="1.4" step="0.01" aria-describedby="gamma-range"><small id="gamma-range">Dimensionless · γ &gt; 1 · air default 1.4</small></div>
+        </fieldset>
+        <button id="calculate" class="primary" type="submit">Calculate / Update Analysis</button>
+        <div id="inputFeedback" class="input-feedback" aria-live="polite"></div>
+      </form>
+      <p class="input-note">Passing the input-range check does not guarantee an attached-shock solution. Local physical limits are checked for every wave.</p>
+    </section>
+    <section class="card analysis-main" aria-labelledby="diagramTitle">
+      <div class="section-heading"><h2 id="diagramTitle">Wave-Pattern Visualization</h2><span class="section-tag">02</span></div>
+      <p class="note">Body-fixed geometry · φ∞ = −α · select a panel to inspect its wave.</p>
+      <div class="diagram-scroll" tabindex="0" aria-label="Scrollable wave schematic">
+        <svg id="diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 650" role="group" aria-label="Interactive diamond-wedge geometry and local wave pattern"></svg>
+      </div>
+      <div class="legend"><span class="shock-key">— Attached shock</span><span class="fan-key">⋯ Expansion fan</span><span>Gray: flow / chord reference</span></div>
+      <div class="panel-picker" role="group" aria-label="Inspect panel">
+        <button type="button" id="inspect-UF" class="secondary" data-inspect="UF" aria-pressed="true">UF · Upper Front</button>
+        <button type="button" id="inspect-UR" class="secondary" data-inspect="UR" aria-pressed="false">UR · Upper Rear</button>
+        <button type="button" id="inspect-LF" class="secondary" data-inspect="LF" aria-pressed="false">LF · Lower Front</button>
+        <button type="button" id="inspect-LR" class="secondary" data-inspect="LR" aria-pressed="false">LR · Lower Rear</button>
+      </div>
+      <details id="inspectorDetails" class="inspector-details"><summary>Selected panel & wave values</summary><div id="waveInspector" class="inspector" aria-live="polite"></div></details>
+      <p class="note diagram-note">Shock angle β is measured from the local upstream flow. Expansion fans originate at their calculated corners. This is a local-wave schematic, not a CFD contour solution.</p>
+    </section>
+  </div>
+  <section id="statusSection" class="status-section" aria-labelledby="statusTitle">
+    <div class="section-heading"><h2 id="statusTitle">Calculation Status</h2><span class="section-tag">03</span></div>
+    <div id="diagnostics" aria-live="polite" aria-atomic="true"></div>
+  </section>
+  <section id="aerodynamicsSection" class="card section" aria-labelledby="aeroTitle">
+    <div class="section-heading"><h2 id="aeroTitle">Aerodynamic Results</h2><span class="section-tag">04</span></div>
+    <div class="metrics" id="metrics"></div>
+    <p class="note">CN: normal force · CA: axial force · CL: lift · CD: wave drag. Pressure forces only; viscous drag is neglected. L/D is unavailable when its division is unsafe.</p>
+  </section>
+  <section id="panelsSection" class="card section" aria-labelledby="panelsTitle">
+    <div class="section-heading"><h2 id="panelsTitle">Panel States</h2><span class="section-tag">05</span></div>
+    <div class="tablewrap" tabindex="0" aria-label="Scrollable panel states table"><table>
+      <thead><tr><th>Panel</th><th>Wave Type</th><th>Mach Number</th><th>Static Pressure (Pa)</th><th>Pressure Coefficient Cp</th><th>Flow Angle (deg)</th></tr></thead><tbody id="panels"></tbody>
+    </table></div>
+  </section>
+  <section id="pressureSection" class="card section" aria-labelledby="pressureTitle">
+    <div class="section-heading"><h2 id="pressureTitle">Surface Pressure Distribution</h2><span class="section-tag">06</span></div>
+    <p id="pressureCaption" class="note"></p>
+    <div class="plot-scroll" tabindex="0" aria-label="Scrollable pressure-distribution plot"><svg id="pressurePlot" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 340" role="group" aria-label="Upper- and lower-surface Cp versus x over chord"></svg></div>
+    <div class="legend pressure-legend"><span>— Upper surface (UF → UR)</span><span>– – Lower surface (LF → LR)</span></div>
+    <p class="note">Piecewise-constant panel pressures · x/c = 0 at the leading edge and 1 at the trailing edge · Cp increases upward. The step follows the actual front/rear panel intersection.</p>
+  </section>
+  <section id="wavesSection" class="card section" aria-labelledby="wavesTitle">
+    <div class="section-heading"><h2 id="wavesTitle">Detailed Wave Results</h2><span class="section-tag">07</span></div>
+    <div class="tablewrap" tabindex="0" aria-label="Scrollable detailed wave results"><table>
+      <thead><tr><th>Location</th><th>Wave Type</th><th>θ (deg)</th><th>β (deg)</th><th>ν₁ (deg)</th><th>ν₂ (deg)</th><th>M₁</th><th>M₂</th><th>p₁ (Pa)</th><th>p₂ (Pa)</th><th>p₂/p₁</th></tr></thead><tbody id="waves"></tbody>
+    </table></div>
+    <details class="detail-block"><summary>Flow sequence & failure propagation</summary><div class="surface-grid" id="surfaces"></div></details>
+  </section>
+  <section id="engineeringSection" class="card section">
+    <details id="engineeringDetails">
+      <summary class="engineering-summary">Engineering Model & Numerical Details</summary>
+      <div class="model-overview">
+        <div><h3>Adopted model</h3><p>Steady, two-dimensional, inviscid flow of a calorically perfect gas. Shock–expansion theory, weak attached shocks, Prandtl–Meyer expansions, and vector panel pressure forces. Constant γ for each analysis.</p></div>
+        <div><h3>Supported inputs</h3><p>M∞: 1.5–5.0<br>α: −10° to +10°<br>δL, δT: 2°–15°<br>p∞ &gt; 0 Pa; c &gt; 0 m; γ &gt; 1<br>Current γ: <strong id="currentGamma">1.4000</strong></p></div>
+        <div><h3>Numerical controls</h3><p>Root tolerance: <span id="rootTolerance">10⁻¹⁰ rad</span><br>Maximum iterations: <span id="maxIterations">200</span><br>Zero-turn tolerance: 10⁻⁹ rad<br>Near-zero denominator tolerance: 10⁻¹⁴<br>Near-zero CD tolerance: 10⁻¹⁰</p></div>
+      </div>
+      <p class="note">Body coordinates: +x from leading to trailing edge; +y upward; positive angles counterclockwise. φ∞ = −α. Internally, angles are radians, pressures are Pa, and lengths are m.</p>
+      <p class="note">Warning threshold: a compression within 1° below θmax. At equality, the limiting attached root is accepted with a warning; any excess is an error. Expansion requires νtarget &lt; νmax. The existing numerical inversion bracket is 1 ≤ M ≤ 100, separate from the supported freestream range; a target beyond this bracket produces an explicit numerical error.</p>
+      <p class="note">Errors block dependent results. Warnings preserve otherwise valid calculations. No values are silently clamped, and unavailable states are not replaced by freestream values or zeros.</p>
+<div class="detail-block"><details><summary>Engineering model & equation traceability</summary>
+<p>Team specification: steady, two-dimensional, inviscid flow of a calorically perfect gas with constant γ; a sharp diamond wedge; supersonic freestream; shock–expansion theory; pressure forces only. Viscous and skin-friction drag are neglected.</p>
+<p>Body coordinates: +x from leading edge to trailing edge, +y upward, positive angles counterclockwise. Keep φ∞ = −α; UF = +δL, UR = −δT, LF = −δL, LR = +δT. The upper and lower sequences are independent; each rear panel receives its front panel's downstream state. Positive upper turns and negative lower turns are compression.</p>
+<div class="tablewrap"><table class="trace-table"><thead><tr><th>Model element</th><th>Established equation / convention</th><th>Source functions</th></tr></thead><tbody>
+<tr><td>Geometry</td><td>Front and rear panel lines intersect at x tan δL = (c − x) tan δT. Tangent and outward unit normal come from each panel's endpoints.</td><td><code>buildGeometry</code></td></tr>
+<tr><td>Oblique shock</td><td>tan θ = 2 cot β (M₁² sin²β − 1) / [M₁²(γ + cos 2β) + 2]. The weak root lies between μ = asin(1/M₁) and β at θmax.</td><td><code>thetaFromBeta</code>, <code>findThetaMax</code>, <code>checkAttachedShock</code></td></tr>
+<tr><td>Normal component</td><td>Mn₁ = M₁ sin β; Mn₂² = [1 + (γ−1)Mn₁²/2] / [γMn₁² − (γ−1)/2]; M₂ = Mn₂ / sin(β−θ); p₂/p₁ = 1 + 2γ(Mn₁²−1)/(γ+1).</td><td><code>obliqueShock</code></td></tr>
+<tr><td>Expansion</td><td>ν(M) = √[(γ+1)/(γ−1)] atan √[(γ−1)(M²−1)/(γ+1)] − atan √(M²−1); ν₂ = ν₁ + θ. Invert ν(M₂) numerically.</td><td><code>prandtlMeyer</code>, <code>invertPrandtlMeyer</code></td></tr>
+<tr><td>Expansion pressure</td><td>p₂/p₁ = {[1 + (γ−1)M₁²/2] / [1 + (γ−1)M₂²/2]}^[γ/(γ−1)].</td><td><code>expansionFan</code></td></tr>
+<tr><td>Pressure coefficient</td><td>q∞ = ½ γ p∞ M∞²; Cp,i = (pi − p∞) / q∞.</td><td><code>calculateDiamondWedgeFlow</code>, <code>calculateCp</code></td></tr>
+<tr><td>Panel force</td><td>Fi = −(pi − p∞) Li nout,i per unit span; F = ΣFi. Sref = c × 1.</td><td><code>calculateForces</code></td></tr>
+<tr><td>Force axes</td><td>CA = Fx/(q∞Sref); CN = Fy/(q∞Sref). Drag unit vector = (cos φ∞, sin φ∞); lift unit vector = (−sin φ∞, cos φ∞). D and L are the corresponding dot products with F. CD = D/(q∞Sref); CL = L/(q∞Sref).</td><td><code>calculateForces</code></td></tr>
+<tr><td>Local limits & failures</td><td>Attached-shock test uses the local M₁ and γ. νtarget must be less than νmax = (π/2){√[(γ+1)/(γ−1)] − 1}. Warnings continue; errors block dependents.</td><td><code>checkAttachedShock</code>, <code>checkExpansionLimit</code>, <code>calculateWave</code></td></tr>
+</tbody></table></div>
+<p>All engineering calculations use radians, Pa, and m. Display angles are degrees. Numerical controls and computational limits are documented above. <code>app.js</code> keeps the approved calculation API, presentation helpers, and interface code in separate labeled sections for review.</p></details></div><div class="detail-block"><details><summary>Supported-range basis & team reference values</summary><p>The range was selected from the attached oblique-shock limits for γ = 1.4. At M₁ = 1.2, θmax is only 3.944°, so this Mach number is excluded from the supported freestream range. These reference values verify the local solvers; they do not replace live limit calculations.</p><div class="tablewrap"><table><caption>Team-provided reference angles (degrees), γ = 1.4. The theoretical maximum Prandtl–Meyer angle is approximately 130.454°.</caption><thead><tr><th>M₁</th><th>μ</th><th>β at θmax</th><th>θmax</th><th>ν(M₁)</th><th>νmax − ν(M₁)</th></tr></thead><tbody id="references"></tbody></table></div></details></div>
+      <div class="detail-block"><details><summary>Automated Checks</summary><div class="toolbar"><button id="test" class="secondary" type="button">Run checks</button><span id="testSummary" role="status"></span></div><p class="note">Numerical and display checks complement the team’s independent validation calculations.</p><ol id="testResults"></ol></details></div>
+<div class="detail-block"><details><summary>PRD acceptance checklist & validation status</summary>
+<p id="acceptanceSummary" class="notice">Representative validation against the team's independent calculations and manual browser portability checks remain pending. Automated consistency tests do not replace those checks.</p>
+<div class="tablewrap"><table class="acceptance-table"><thead><tr><th>Criterion</th><th>Evidence / remaining work</th><th>Status</th></tr></thead><tbody id="acceptanceRows"></tbody></table></div>
+<h3>Boundary cases</h3><div class="tablewrap"><table><thead><tr><th>ID</th><th>Case</th><th>Expected</th><th>Actual</th><th>Check</th></tr></thead><tbody id="boundaryRows"></tbody></table></div>
+<p class="note">Boundary checks use the fixed regression baseline M∞ = 2.5, p∞ = 101325 Pa, α = 4°, δL = 10°, δT = 8°, c = 1 m, γ = 1.4, except for the stated overrides. The expansion-limit case is a direct solver check because that theoretical limit cannot be requested through the supported geometric input range.</p>
+</details></div>
+      <div class="detail-block"><details><summary>Local Run Instructions</summary><ol class="instructions">
+        <li>Extract <code>AERO402-Diamond-Wedge.zip</code>.</li><li>Keep <code>index.html</code>, <code>style.css</code>, and <code>app.js</code> together inside the extracted folder.</li><li>Open <code>index.html</code> in a modern browser. No installation, server, database, or external calculation service is needed.</li><li>Enter inputs and press <strong>Calculate / Update Analysis</strong>. Review warnings and errors before using the results.</li><li>See <code>README.md</code> for the demonstration case, source organization, checks, and validation status.</li></ol></details></div>
+    </details>
+  </section>
+  <footer>AERO402 · Shock–Expansion Theory · Front-end calculations · Unit span reference</footer>
+</main>
+</body>
+</html>
+
