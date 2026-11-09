@@ -577,6 +577,7 @@ globalThis.AERO402_VIEW=AERO402_VIEW;
 
 // SECTION 3: INTERFACE, FORMATTING, SVG AND EVENTS
 'use strict';
+// SVG colors use darker sage/rose companions to the palette in style.css.
 const $=id=>document.getElementById(id),{rad,deg,IDS}=AERO402;
 const fmt=(v,n=4)=>typeof v==='number'&&Number.isFinite(v)?(v!==0&&(Math.abs(v)<.5*10**(-n)||Math.abs(v)>=1e8)?v.toExponential(3):v.toFixed(n)):'—';
 const angle=v=>v===null||v===undefined?'—':fmt(deg(v),3);
@@ -601,7 +602,7 @@ function readInputs(){
   return {MInf:number('mach'),pInf:number('pinf'),alpha:rad(number('alpha')),gamma:number('gamma'),deltaL:rad(number('dl')),deltaT:rad(number('dt')),chord:number('chord')};
 }
 function waveName(w){return w.type==='none'?'None':w.type||'Unavailable';}
-function svgText(x,y,value,color='#9db0c9',size=14,extra=''){
+function svgText(x,y,value,color='#686164',size=14,extra=''){
   return '<text x="'+x+'" y="'+y+'" fill="'+color+'" font-size="'+size+'" '+extra+'>'+escapeHTML(value)+'</text>';
 }
 function svgLine(a,b,color,width=1.5,extra=''){
@@ -618,73 +619,73 @@ function svgPanelGroup(id,content,label){
 }
 function renderDiagram(result){
   const svg=$('diagram'),g=result.geometry;
-  if(!g){svg.innerHTML=svgText(550,325,'Geometry unavailable — check the input diagnostics.','#9db0c9',18,'text-anchor="middle"');return;}
+  if(!g){svg.innerHTML=svgText(550,325,'Geometry unavailable — check the input diagnostics.','#686164',18,'text-anchor="middle"');return;}
   // Normalize by chord first to keep this display independent of dimensional scale.
   const scale=640,origin=[260,325],point=([x,y])=>[origin[0]+x/g.chord*scale,origin[1]-y/g.chord*scale];
-  let markup='<defs><marker id="flowArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7Z" fill="#9db0c9"/></marker></defs>';
-  markup+=svgLine([225,325],[985,325],'#365275',1,'stroke-dasharray="5 5"');
+  let markup='<defs><marker id="flowArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7Z" fill="#686164"/></marker></defs>';
+  markup+=svgLine([225,325],[985,325],'#c3aca2',1,'stroke-dasharray="5 5"');
   for(const id of IDS){
-    const w=result.waves[id],p=g.panels[id],start=point(p.start),color=w.classification==='compression'?'#5eead4':'#fdba74';
+    const w=result.waves[id],p=g.panels[id],start=point(p.start),color=w.classification==='compression'?'#426266':'#925a56';
     const rays=AERO402_VIEW.waveDirections(w,p.side);
     if(rays.length)markup+=svgPanelGroup(id,rays.map(phi=>svgLine(start,directionEnd(start,phi,270),color,w.classification==='compression'?2.5:1.2,w.classification==='expansion'?'stroke-dasharray="4 3"':'')).join(''),id+': '+waveName(w));
   }
-  markup+='<polygon points="'+['LE','U','TE','L'].map(v=>point(g.vertices[v]).join(',')).join(' ')+'" fill="#1b3554" stroke="#dbeafe" stroke-width="2"/>';
-  markup+=svgLine(point(g.vertices.LE),point(g.vertices.TE),'#9db0c9',1,'stroke-dasharray="5 5"');
-  markup+=svgText(530,319,'Chord line','#9db0c9',11);
+  markup+='<polygon points="'+['LE','U','TE','L'].map(v=>point(g.vertices[v]).join(',')).join(' ')+'" fill="#dec9bf" stroke="#686164" stroke-width="2"/>';
+  markup+=svgLine(point(g.vertices.LE),point(g.vertices.TE),'#686164',1,'stroke-dasharray="5 5"');
+  markup+=svgText(530,319,'Chord line','#686164',11);
   for(const id of IDS){
     const p=g.panels[id],s=result[id],a=point(p.start),b=point(p.end),mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
-    const panelLine=svgLine(a,b,id===selectedPanel?'#5eead4':'#c7d7ed',id===selectedPanel?4:2.5);
+    const panelLine=svgLine(a,b,id===selectedPanel?'#426266':'#353536',id===selectedPanel?4:2.5);
     const hit=svgLine(a,b,'transparent',20);
-    const label=svgText(mid[0]+p.normal[0]*17,mid[1]-p.normal[1]*17,id,'#e8f0fb',13,'text-anchor="middle"');
+    const label=svgText(mid[0]+p.normal[0]*17,mid[1]-p.normal[1]*17,id,'#353536',13,'text-anchor="middle"');
     markup+=svgPanelGroup(id,hit+panelLine+label,'Inspect '+names[id]+': M '+fmt(s.M,3)+', p '+pressure(s.p)+' Pa, Cp '+fmt(s.Cp));
     if(s.available){
       const arrowStart=[mid[0]+p.normal[0]*37-22*Math.cos(p.phi),mid[1]-p.normal[1]*37+22*Math.sin(p.phi)];
-      markup+=svgLine(arrowStart,directionEnd(arrowStart,p.phi,44),'#9db0c9',1.7,'marker-end="url(#flowArrow)"');
+      markup+=svgLine(arrowStart,directionEnd(arrowStart,p.phi,44),'#686164',1.7,'marker-end="url(#flowArrow)"');
     }
   }
   if(result.freestream){
     const phi=result.freestream.phi,center=[100,325];
-    markup+=svgLine(directionEnd(center,phi,-65),directionEnd(center,phi,65),'#9db0c9',2,'marker-end="url(#flowArrow)"');
-    markup+=svgLine(center,[175,325],'#526780',1,'stroke-dasharray="3 4"');
-    markup+=arc(center,48,0,phi,'#c7d7ed');
-    markup+=svgText(22,245,'M∞ = '+fmt(result.freestream.M,3),'#c7d7ed',15);
-    markup+=svgText(22,268,'α = '+angle(result.inputs.alpha)+'°','#c7d7ed',14);
-    markup+=svgText(22,291,'φ∞ = '+angle(phi)+'°','#9db0c9',13);
+    markup+=svgLine(directionEnd(center,phi,-65),directionEnd(center,phi,65),'#686164',2,'marker-end="url(#flowArrow)"');
+    markup+=svgLine(center,[175,325],'#8b8180',1,'stroke-dasharray="3 4"');
+    markup+=arc(center,48,0,phi,'#353536');
+    markup+=svgText(22,245,'M∞ = '+fmt(result.freestream.M,3),'#353536',15);
+    markup+=svgText(22,268,'α = '+angle(result.inputs.alpha)+'°','#353536',14);
+    markup+=svgText(22,291,'φ∞ = '+angle(phi)+'°','#686164',13);
   }
   const selected=result.waves[selectedPanel],sp=g.panels[selectedPanel];
   if(selected.available&&selected.type!=='none'){
     const start=point(sp.start),side=sp.side==='upper'?1:-1;
-    markup+=svgLine(start,directionEnd(start,selected.phi1,98),'#9db0c9',1,'stroke-dasharray="3 4"');
-    markup+=arc(start,28,selected.phi1,selected.phi2,'#e8f0fb');
+    markup+=svgLine(start,directionEnd(start,selected.phi1,98),'#686164',1,'stroke-dasharray="3 4"');
+    markup+=arc(start,28,selected.phi1,selected.phi2,'#353536');
     const thetaLabel=directionEnd(start,(selected.phi1+selected.phi2)/2,38);
-    markup+=svgText(thetaLabel[0],thetaLabel[1]+4,'θ','#e8f0fb',12);
+    markup+=svgText(thetaLabel[0],thetaLabel[1]+4,'θ','#353536',12);
     if(selected.classification==='compression'){
-      markup+=arc(start,58,selected.phi1,selected.phi1+side*selected.beta,'#5eead4');
+      markup+=arc(start,58,selected.phi1,selected.phi1+side*selected.beta,'#426266');
       const betaLabel=directionEnd(start,selected.phi1+side*selected.beta/2,72);
-      markup+=svgText(betaLabel[0],betaLabel[1]+4,'β','#5eead4',13);
+      markup+=svgText(betaLabel[0],betaLabel[1]+4,'β','#426266',13);
     }
   }
-  markup+=svgText(244,350,'LE','#9db0c9',12);
-  markup+=svgText(912,346,'TE / +x','#9db0c9',12);
-  markup+='<rect x="452" y="497" width="196" height="135" rx="10" fill="#0b1b2e" stroke="#263b59"/>';
-  markup+=svgText(550,521,'Geometry','#e8f0fb',14,'text-anchor="middle"');
-  markup+=svgText(550,547,'δL '+angle(result.inputs.deltaL)+'° · δT '+angle(result.inputs.deltaT)+'°','#c7d7ed',12,'text-anchor="middle"');
-  markup+=svgText(550,574,'c = '+fmt(g.chord,3)+' m','#9db0c9',13,'text-anchor="middle"');
-  markup+=svgText(550,601,'Mid x/c = '+fmt(g.xMid/g.chord,4),'#9db0c9',13,'text-anchor="middle"');
+  markup+=svgText(244,350,'LE','#686164',12);
+  markup+=svgText(912,346,'TE / +x','#686164',12);
+  markup+='<rect x="452" y="497" width="196" height="135" rx="10" fill="#f3e6df" stroke="#e4d7d0"/>';
+  markup+=svgText(550,521,'Geometry','#353536',14,'text-anchor="middle"');
+  markup+=svgText(550,547,'δL '+angle(result.inputs.deltaL)+'° · δT '+angle(result.inputs.deltaT)+'°','#353536',12,'text-anchor="middle"');
+  markup+=svgText(550,574,'c = '+fmt(g.chord,3)+' m','#686164',13,'text-anchor="middle"');
+  markup+=svgText(550,601,'Mid x/c = '+fmt(g.xMid/g.chord,4),'#686164',13,'text-anchor="middle"');
   // Wave callouts remain clear of the body and contain the required engineering labels.
   const boxes={UF:[18,18],UR:[662,18],LF:[18,497],LR:[662,497]};
   for(const id of IDS){
-    const [x,y]=boxes[id],w=result.waves[id],s=result[id],color=w.status==='ERROR'?'#fda4af':w.classification==='expansion'?'#fdba74':'#5eead4';
-    let box='<rect x="'+x+'" y="'+y+'" width="420" height="135" rx="10" fill="#0b1b2e" stroke="'+(id===selectedPanel?'#5eead4':'#365275')+'" stroke-width="'+(id===selectedPanel?2:1)+'"/>';
-    box+=svgText(x+14,y+23,id+' · '+names[id]+' · '+w.status,'#e8f0fb',14);
+    const [x,y]=boxes[id],w=result.waves[id],s=result[id],color=w.status==='ERROR'?'#8a3f4c':w.classification==='expansion'?'#925a56':'#426266';
+    let box='<rect x="'+x+'" y="'+y+'" width="420" height="135" rx="10" fill="#f3e6df" stroke="'+(id===selectedPanel?'#426266':'#c3aca2')+'" stroke-width="'+(id===selectedPanel?2:1)+'"/>';
+    box+=svgText(x+14,y+23,id+' · '+names[id]+' · '+w.status,'#353536',14);
     box+=svgText(x+14,y+46,waveName(w),color,14);
     if(w.available){
-      box+=svgText(x+14,y+69,'M₁ '+fmt(w.M1,3)+' → M₂ '+fmt(w.M2,3)+'   ·   θ '+angle(w.theta)+'°','#c7d7ed',13);
-      box+=svgText(x+14,y+92,w.classification==='compression'?'β '+angle(w.beta)+'° (from upstream flow)':w.classification==='expansion'?'ν₁ '+angle(w.nu1)+'° → ν₂ '+angle(w.nu2)+'°':'Zero turn · upstream Mach and pressure unchanged','#c7d7ed',13);
-      box+=svgText(x+14,y+115,'p '+pressure(s.p)+' Pa   ·   Cp '+fmt(s.Cp,5),'#9db0c9',13);
+      box+=svgText(x+14,y+69,'M₁ '+fmt(w.M1,3)+' → M₂ '+fmt(w.M2,3)+'   ·   θ '+angle(w.theta)+'°','#353536',13);
+      box+=svgText(x+14,y+92,w.classification==='compression'?'β '+angle(w.beta)+'° (from upstream flow)':w.classification==='expansion'?'ν₁ '+angle(w.nu1)+'° → ν₂ '+angle(w.nu2)+'°':'Zero turn · upstream Mach and pressure unchanged','#353536',13);
+      box+=svgText(x+14,y+115,'p '+pressure(s.p)+' Pa   ·   Cp '+fmt(s.Cp,5),'#686164',13);
     }else{
-      box+=svgText(x+14,y+72,w.completion==='blocked'?'Blocked by upstream error':'Unavailable — see diagnostics','#fda4af',13);
-      box+=svgText(x+14,y+99,w.error?.code||'CALCULATION_UNAVAILABLE','#9db0c9',12);
+      box+=svgText(x+14,y+72,w.completion==='blocked'?'Blocked by upstream error':'Unavailable — see diagnostics','#8a3f4c',13);
+      box+=svgText(x+14,y+99,w.error?.code||'CALCULATION_UNAVAILABLE','#686164',12);
     }
     markup+=svgPanelGroup(id,box,'Inspect '+names[id]+': '+waveName(w)+', '+w.status);
   }
@@ -695,21 +696,21 @@ function renderPressurePlot(result){
   globalThis.lastPressureData=data;
   if(!data.segments.length){
     $('pressureCaption').textContent='Pressure distribution unavailable: no valid panel states.';
-    svg.innerHTML=svgText(550,170,'No valid pressure data for this case.','#9db0c9',17,'text-anchor="middle"');return;
+    svg.innerHTML=svgText(550,170,'No valid pressure data for this case.','#686164',17,'text-anchor="middle"');return;
   }
   $('pressureCaption').textContent=(data.complete?(result.status==='WARNING'?'Complete distribution — warnings apply.':'Complete distribution.'):'Partial distribution — unavailable panels: '+data.missing.join(', ')+'.')+' Mid-corner at x/c = '+fmt(data.xMid,5)+'.';
   const values=[0,...data.segments.map(s=>s.Cp)],low=Math.min(...values),high=Math.max(...values),span=Math.max(high-low,.1),lo=low-span*.16,hi=high+span*.20;
   const x=v=>88+v*940,y=v=>270-(v-lo)/(hi-lo)*224;
-  let markup=svgText(20,30,'Cp','#c7d7ed',15)+svgText(1028,322,'x/c','#c7d7ed',14,'text-anchor="end"');
+  let markup=svgText(20,30,'Cp','#353536',15)+svgText(1028,322,'x/c','#353536',14,'text-anchor="end"');
   for(let i=0;i<=4;i++){
     const value=lo+(hi-lo)*i/4,Y=y(value);
-    markup+=svgLine([88,Y],[1028,Y],'#263b59',1)+svgText(74,Y+4,fmt(value,3),'#9db0c9',12,'text-anchor="end"');
-    const xv=i/4,X=x(xv);markup+=svgLine([X,46],[X,270],'#263b59',1)+svgText(X,294,fmt(xv,2),'#9db0c9',12,'text-anchor="middle"');
+    markup+=svgLine([88,Y],[1028,Y],'#e4d7d0',1)+svgText(74,Y+4,fmt(value,3),'#686164',12,'text-anchor="end"');
+    const xv=i/4,X=x(xv);markup+=svgLine([X,46],[X,270],'#e4d7d0',1)+svgText(X,294,fmt(xv,2),'#686164',12,'text-anchor="middle"');
   }
-  markup+=svgLine([88,y(0)],[1028,y(0)],'#526780',1,'stroke-dasharray="3 4"');
-  markup+=svgLine([x(data.xMid),46],[x(data.xMid),270],'#526780',1,'stroke-dasharray="4 4"');
+  markup+=svgLine([88,y(0)],[1028,y(0)],'#8b8180',1,'stroke-dasharray="3 4"');
+  markup+=svgLine([x(data.xMid),46],[x(data.xMid),270],'#8b8180',1,'stroke-dasharray="4 4"');
   for(const surface of ['upper','lower']){
-    const segs=data.segments.filter(s=>s.surface===surface),color=surface==='upper'?'#5eead4':'#c4b5fd',dash=surface==='lower'?'stroke-dasharray="9 6"':'';
+    const segs=data.segments.filter(s=>s.surface===surface),color=surface==='upper'?'#426266':'#925a56',dash=surface==='lower'?'stroke-dasharray="9 6"':'';
     if(segs.length===2)markup+=svgLine([x(segs[0].x1),y(segs[0].Cp)],[x(segs[1].x0),y(segs[1].Cp)],color,2,dash);
     for(const s of segs){
       const a=[x(s.x0),y(s.Cp)],b=[x(s.x1),y(s.Cp)],label=s.id+': Cp '+fmt(s.Cp,6)+'; p '+pressure(s.p)+' Pa; x/c '+fmt(s.x0,4)+' to '+fmt(s.x1,4);
@@ -718,7 +719,7 @@ function renderPressurePlot(result){
       markup+=svgPanelGroup(s.id,line+text,label);
     }
   }
-  markup+=svgLine([88,46],[88,270],'#9db0c9',1.2)+svgLine([88,270],[1028,270],'#9db0c9',1.2);
+  markup+=svgLine([88,46],[88,270],'#686164',1.2)+svgLine([88,270],[1028,270],'#686164',1.2);
   svg.innerHTML=markup;
 }
 function renderInspector(result){
@@ -796,8 +797,8 @@ function inputsChanged(){
   globalThis.lastResult=null;globalThis.lastPressureData=null;
   $('metrics').innerHTML=resultCards({},true);
   $('diagnostics').innerHTML='<div class="banner pending-state">Inputs changed. Results have been cleared. Press Calculate / Update Analysis.</div>'+validation.errors.map(diagnosticHTML).join('');
-  $('diagram').innerHTML=svgText(550,325,'Press Calculate / Update Analysis to refresh the diagram.','#9db0c9',18,'text-anchor="middle"');
-  $('pressurePlot').innerHTML=svgText(550,170,'Awaiting recalculation.','#9db0c9',18,'text-anchor="middle"');
+  $('diagram').innerHTML=svgText(550,325,'Press Calculate / Update Analysis to refresh the diagram.','#686164',18,'text-anchor="middle"');
+  $('pressurePlot').innerHTML=svgText(550,170,'Awaiting recalculation.','#686164',18,'text-anchor="middle"');
   $('pressureCaption').textContent='Pressure data cleared after input changes.';
   $('surfaces').innerHTML='';$('panels').innerHTML='';$('waves').innerHTML='';
   $('waveInspector').textContent='Select a panel after calculating the updated case.';
@@ -840,8 +841,8 @@ function runChecks(){
   const engine=AERO402.runSelfTests(),view=AERO402_VIEW.runTests(),checks=[...engine.checks,...view.checks];
   const report={passed:checks.every(c=>c.passed),total:checks.length,passedCount:checks.filter(c=>c.passed).length,checks};globalThis.lastTestReport=report;
   $('testSummary').textContent=report.passedCount+'/'+report.total+' passed'+(report.passed?'':' — engineering review required');
-  $('testSummary').style.color=report.passed?'var(--cyan)':'var(--red)';
-  $('testResults').innerHTML=report.checks.map(c=>'<li style="color:'+(c.passed?'var(--muted)':'var(--red)')+'">'+(c.passed?'PASS':'FAIL')+' · '+escapeHTML(c.name)+(c.error?' · '+escapeHTML(c.error):'')+'</li>').join('');
+  $('testSummary').style.color=report.passed?'var(--sage-ink)':'var(--error)';
+  $('testResults').innerHTML=report.checks.map(c=>'<li style="color:'+(c.passed?'var(--muted)':'var(--error)')+'">'+(c.passed?'PASS':'FAIL')+' · '+escapeHTML(c.name)+(c.error?' · '+escapeHTML(c.error):'')+'</li>').join('');
   renderAcceptance(report);
 }
 $('conditions').addEventListener('submit',event=>{event.preventDefault();run();});
