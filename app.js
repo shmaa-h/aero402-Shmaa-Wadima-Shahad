@@ -807,43 +807,13 @@ function selectPanel(id){
   if(!IDS.includes(id)||!globalThis.lastResult)return;
   selectedPanel=id;$('inspectorDetails').open=true;renderDiagram(globalThis.lastResult);renderPressurePlot(globalThis.lastResult);renderInspector(globalThis.lastResult);
 }
-function renderAcceptance(report){
-  const ok=report.passed?'Automated checks pass':'Automated check failure — review required',checkState=report.passed?'CHECKED':'REVIEW';
-  const rows=[
-    ['AC-01','Front-end operation','Local index.html, style.css and app.js; no network-loaded assets or calculation service.','IMPLEMENTED'],
-    ['AC-02','Required inputs','Mach, pressure in Pa, α, δL, δT, chord and γ; units and supported ranges shown.','IMPLEMENTED'],
-    ['AC-03','Input validation',ok,checkState],
-    ['AC-04','Oblique-shock calculation','Weak branch, normal-component relations, residual and reference-table tests.',checkState],
-    ['AC-05','Attached-shock limit','Dynamic local-Mach maximum; detached-shock cases rejected.',checkState],
-    ['AC-06','Expansion calculation','Numerical PM inversion, pressure relation and sanity checks.',checkState],
-    ['AC-07','Expansion limit','Theoretical and numerical limits checked separately.',checkState],
-    ['AC-08','Sequential calculation','Front-to-rear upstream handoff tests.',checkState],
-    ['AC-09','Automatic classification','Both leading-edge transitions and zero-turn tolerance tests.',checkState],
-    ['AC-10','Symmetry','Upper/lower M, p, Cp equality and CL approximately zero.',checkState],
-    ['AC-11','Panel results','Named panels, wave type, M, pressure, Cp, flow direction and status.','IMPLEMENTED'],
-    ['AC-12','Aerodynamic results','CL, CD, CA, CN and guarded L/D; unavailable after dependent failure.',checkState],
-    ['AC-13','Wave visualization','Geometry, freestream, local arrows, ray directions, angle annotations, callouts and panel inspector. Browser visual sign-off pending.','IMPLEMENTED'],
-    ['AC-14','Responsive updates','Calculate / Update Analysis refreshes results in place; edits clear superseded results.','IMPLEMENTED'],
-    ['AC-15','Error handling','Original errors retained, dependent outputs null and no false pressure curves.',checkState],
-    ['AC-16','Warning handling','Warnings survive front-to-rear calculations and preserve usable forces.',checkState],
-    ['AC-17','Pressure distribution','Upper/lower piecewise Cp versus x/c using the actual geometry.',checkState],
-    ['AC-18','Numerical reliability','10⁻¹⁰ angular residual, 200 iterations, explicit nonconvergence checks.',checkState],
-    ['AC-19','Five independent representative cases','Pending the team’s five case inputs and independently calculated expected values; automated/reference-limit checks are not a substitute.','PENDING'],
-    ['AC-20','Boundary validation','Eight named cases below, plus the embedded boundary and failure tests.',checkState],
-    ['AC-21','Browser portability','Extract the complete project and open index.html. Manual verification in the team’s target browsers remains pending.','PENDING'],
-    ['AC-22','Engineering traceability','Documented equations, signs, units, ranges and source-function mapping in app.js and README.md.','IMPLEMENTED']
-  ];
-  $('acceptanceRows').innerHTML=rows.map(([id,title,evidence,status])=>'<tr><td>'+id+' · '+title+'</td><td>'+escapeHTML(evidence)+'</td><td class="'+(status==='PENDING'?'pending':'')+'">'+status+'</td></tr>').join('');
-  const boundary=AERO402_VIEW.boundaryChecks();globalThis.lastBoundaryReport=boundary;
-  $('boundaryRows').innerHTML=boundary.map(b=>'<tr><td>'+b.id+'</td><td>'+escapeHTML(b.label)+'</td><td>'+escapeHTML(b.expected)+'</td><td>'+escapeHTML(b.actual)+'</td><td>'+ (b.passed?'PASS':'FAIL')+'</td></tr>').join('');
-}
 function runChecks(){
   const engine=AERO402.runSelfTests(),view=AERO402_VIEW.runTests(),checks=[...engine.checks,...view.checks];
   const report={passed:checks.every(c=>c.passed),total:checks.length,passedCount:checks.filter(c=>c.passed).length,checks};globalThis.lastTestReport=report;
   $('testSummary').textContent=report.passedCount+'/'+report.total+' passed'+(report.passed?'':' — engineering review required');
   $('testSummary').style.color=report.passed?'var(--sage-ink)':'var(--error)';
   $('testResults').innerHTML=report.checks.map(c=>'<li style="color:'+(c.passed?'var(--muted)':'var(--error)')+'">'+(c.passed?'PASS':'FAIL')+' · '+escapeHTML(c.name)+(c.error?' · '+escapeHTML(c.error):'')+'</li>').join('');
-  renderAcceptance(report);
+  globalThis.lastBoundaryReport=AERO402_VIEW.boundaryChecks();
 }
 $('conditions').addEventListener('submit',event=>{event.preventDefault();run();});
 $('conditions').addEventListener('input',inputsChanged);

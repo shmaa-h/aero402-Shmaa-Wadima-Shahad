@@ -119,7 +119,7 @@ details[open] > summary { margin-bottom: 15px; }
 .model-overview { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 22px; margin: 20px 0; }
 .model-overview p, details p { color: var(--muted); font-size: 12px; }
 .detail-block { border-top: 1px solid var(--line); padding-top: 15px; margin-top: 16px; }
-.trace-table td, .acceptance-table td { white-space: normal; min-width: 160px; }
+.trace-table td { white-space: normal; min-width: 160px; }
 .trace-table td:nth-child(2) { min-width: 320px; }
 code { color: var(--ink); font-size: 11px; overflow-wrap: anywhere; }
 .notice { background: var(--inset); border-left: 2px solid var(--warning); padding: 12px; color: var(--muted); font-size: 12px; }
