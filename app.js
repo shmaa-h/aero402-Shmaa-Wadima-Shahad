@@ -1,5 +1,5 @@
 // AERO402 — front-end analysis application
-// SECTION 1: APPROVED ENGINEERING MODEL (unchanged from Steps 1–4)
+// SECTION 1: APPROVED ENGINEERING MODEL (user-approved freestream sign correction)
 'use strict';
 // Calculation API: angles in radians, pressure in Pa, length in m.
 // Status is always VALID / WARNING / ERROR. Completion tracks availability
@@ -366,7 +366,7 @@ const AERO402 = (() => {
     try {
       requireAssessment(validation);
       r.geometry=buildGeometry(inputs);
-      r.freestream=createFlowState(inputs.MInf,inputs.pInf,-inputs.alpha);
+      r.freestream=createFlowState(inputs.MInf,inputs.pInf,inputs.alpha);
       r.qInf=checked(.5*inputs.gamma*inputs.pInf*inputs.MInf**2,'Freestream dynamic pressure');
       requireValue(r.qInf>0,'INVALID_DYNAMIC_PRESSURE','Freestream dynamic pressure is zero or unrepresentable.');
       safeDivide(1,r.qInf,{label:'Dynamic-pressure reference'});
@@ -430,15 +430,15 @@ const AERO402 = (() => {
       test('Physical rejection of '+field+' = '+value,()=>{const r=run({[field]:value});return r.status==='ERROR'&&r.inputValidation.stage==='physical';});
     test('Multiple invalid inputs preserve distinct diagnostics',()=>validateInputs({...DEFAULT_INPUTS,MInf:NaN,pInf:Infinity}).errors.length===2);
     test('Default gamma is 1.4; other gamma > 1 is not silently replaced',()=>{const r=run({gamma:1.3});return DEFAULT_INPUTS.gamma===1.4&&r.status!=='ERROR'&&r.inputs.gamma===1.3;});
-    for(const [id,center] of [['UF',-rad(5)],['LF',rad(5)]])test(id+': automatic expansion / none / compression transition',()=>{
+    for(const [id,center] of [['UF',rad(5)],['LF',-rad(5)]])test(id+': automatic compression / none / expansion transition',()=>{
       const types=[-1,0,1].map(sign=>run({deltaL:rad(5),alpha:center+sign*rad(.1)}).waves[id].classification);
-      return JSON.stringify(types)===JSON.stringify(id==='UF'?['expansion','none','compression']:['compression','none','expansion']);
+      return JSON.stringify(types)===JSON.stringify(id==='UF'?['compression','none','expansion']:['expansion','none','compression']);
     });
-    test('Zero turn copies upstream M and p exactly',()=>{const r=run({alpha:rad(10)});return r.waves.LF.type==='none'&&r.LF.M===r.freestream.M&&r.LF.p===r.freestream.p&&r.LF.Cp===0;});
+    test('Zero turn copies upstream M and p exactly',()=>{const r=run({alpha:rad(10)});return r.waves.UF.type==='none'&&r.UF.M===r.freestream.M&&r.UF.p===r.freestream.p&&r.UF.Cp===0;});
     test('Negligible turn skips wave solvers',()=>classifyTurn(0,SETTINGS.thetaTolerance/2,'upper').type==='none');
     test('Zero-turn tolerance boundary is a genuine turn',()=>classifyTurn(0,SETTINGS.thetaTolerance,'upper').type==='oblique shock');
     test('Sequential front-to-rear state handoff',()=>{const r=run({});return ['UR','LR'].every(id=>{const front=id==='UR'?r.UF:r.LF,w=r.waves[id];return w.M1===front.M&&w.p1===front.p&&w.phi1===front.phi;});});
-    test('Sign convention remains phiInf = −alpha',()=>run({alpha:rad(5)}).freestream.phi===-rad(5));
+    test('Freestream direction equals alpha at positive, zero and negative incidence',()=>[-5,0,5].every(a=>run({alpha:rad(a)}).freestream.phi===rad(a)));
     test('Unequal-angle geometry follows both panel orientations',()=>Object.values(buildGeometry(DEFAULT_INPUTS).panels).every(p=>near(Math.atan2(p.end[1]-p.start[1],p.end[0]-p.start[0]),p.phi)));
     test('Outward normals close on the diamond',()=>{const sum=[0,0];Object.values(buildGeometry(DEFAULT_INPUTS).panels).forEach(p=>p.normal.forEach((n,i)=>sum[i]+=n*p.length));return sum.every(v=>Math.abs(v)<1e-12);});
     test('Warning continues through rear state and aerodynamic forces',()=>{
@@ -447,7 +447,7 @@ const AERO402 = (() => {
     });
     test('One-degree shock warning threshold',()=>{const l=findThetaMax(2,1.4);return checkAttachedShock(2,l.thetaMax-rad(.999),1.4).status==='WARNING'&&checkAttachedShock(2,l.thetaMax-rad(1.001),1.4).status==='VALID';});
     test('At maximum: limiting attached root warns; any excess errors',()=>{const l=findThetaMax(2,1.4);return obliqueShock(2,101325,l.thetaMax,1.4).status==='WARNING'&&checkAttachedShock(2,l.thetaMax+1e-12,1.4).error.code==='NO_ATTACHED_SHOCK_SOLUTION';});
-    for(const [alpha,bad,good] of [[10,'upper','lower'],[-10,'lower','upper']])test('In-range detached shock on '+bad+' blocks only dependent states',()=>{
+    for(const [alpha,bad,good] of [[10,'lower','upper'],[-10,'upper','lower']])test('In-range detached shock on '+bad+' blocks only dependent states',()=>{
       const r=run({MInf:1.5,alpha:rad(alpha),deltaL:rad(5)}),f=bad==='upper'?'UF':'LF',rear=bad==='upper'?'UR':'LR';
       return r.inputValidation.status==='VALID'&&r.status==='ERROR'&&r[good+'Surface'].completion==='complete'&&r.waves[f].error.code==='NO_ATTACHED_SHOCK_SOLUTION'&&r.waves[f].beta===null&&r.waves[rear].completion==='blocked'&&r.waves[rear].M1===null&&r[rear].M===null&&r.waves[rear].error===r.waves[f].error&&r.forces.CL===null&&r.forces.CD===null&&r.forces.LD===null;
     });
@@ -504,8 +504,8 @@ const AERO402 = (() => {
       function finiteTree(v){return typeof v==='number'?isFiniteNumber(v):v&&typeof v==='object'?Object.values(v).every(finiteTree):true;}
       return [run({}),run({MInf:1.5,deltaL:rad(15)}),run({MInf:5,alpha:rad(-10)})].every(finiteTree);
     });
-    test('Mirror incidence preserves drag and reverses lift',()=>{
-      const a=run({alpha:rad(4)}),b=run({alpha:rad(-4)});return a.status!=='ERROR'&&b.status!=='ERROR'&&near(a.UF.p,b.LF.p)&&near(a.UR.p,b.LR.p)&&near(a.forces.CL,-b.forces.CL)&&near(a.forces.CD,b.forces.CD);
+    test('Mirror incidence preserves drag and reverses lift with the incidence sign',()=>{
+      const a=run({alpha:rad(4)}),b=run({alpha:rad(-4)});return a.status!=='ERROR'&&b.status!=='ERROR'&&a.forces.CL>0&&b.forces.CL<0&&near(a.UF.p,b.LF.p)&&near(a.UR.p,b.LR.p)&&near(a.forces.CL,-b.forces.CL)&&near(a.forces.CD,b.forces.CD);
     });
     return {passed:checks.every(c=>c.passed),total:checks.length,passedCount:checks.filter(c=>c.passed).length,checks};
   }
@@ -546,11 +546,11 @@ const AERO402_VIEW=(()=>{
       ['B03','γ = 1','ERROR · INVALID_GAMMA',{gamma:1},r=>r.status==='ERROR'&&r.errors[0].code==='INVALID_GAMMA'],
       ['B04','M∞ = 1.2','ERROR · OUTSIDE_SUPPORTED_RANGE',{MInf:1.2},r=>r.status==='ERROR'&&r.errors[0].code==='OUTSIDE_SUPPORTED_RANGE'],
       ['B05','M∞ = 1.5; α = 0°; δL = 15°','ERROR · NO_ATTACHED_SHOCK_SOLUTION',{MInf:1.5,alpha:0,deltaL:rad(15)},r=>r.status==='ERROR'&&r.waves.UF.error.code==='NO_ATTACHED_SHOCK_SOLUTION'],
-      ['B06','α = 5°; δL = 5°','VALID · LF: NO WAVE',{alpha:rad(5),deltaL:rad(5)},r=>r.status==='VALID'&&r.waves.LF.type==='none'],
+      ['B06','α = 5°; δL = 5°','VALID · UF: NO WAVE',{alpha:rad(5),deltaL:rad(5)},r=>r.status==='VALID'&&r.waves.UF.type==='none'],
       ['B07','M∞ = 1.5; α = 0°; δL = 11.2°','WARNING · calculations continue',{MInf:1.5,alpha:0,deltaL:rad(11.2)},r=>r.status==='WARNING'&&r.UR.available&&r.forces.available]
     ].map(([id,label,expected,overrides,check])=>{
       const result=run({...d,...overrides});
-      return {id,label,expected,actual:result.status+(result.errors[0]?' · '+result.errors[0].code:result.waves.LF.type==='none'?' · LF: NO WAVE':result.warnings[0]?' · '+result.warnings[0].code:''),passed:check(result)};
+      return {id,label,expected,actual:result.status+(result.errors[0]?' · '+result.errors[0].code:result.waves.UF.type==='none'?' · UF: NO WAVE':result.warnings[0]?' · '+result.warnings[0].code:''),passed:check(result)};
     });
     const theta=AERO402.prandtlMeyerMaximum(1.4)-AERO402.prandtlMeyer(2,1.4);
     const expansion=AERO402.expansionFan(2,101325,theta,1.4);
@@ -563,12 +563,12 @@ const AERO402_VIEW=(()=>{
     function test(name,fn){try{checks.push({name,passed:!!fn()});}catch(e){checks.push({name,passed:false,error:e.message});}}
     test('Plot has four piecewise-constant panel segments',()=>{const r=run({}),p=pressureDistribution(r);return p.complete&&p.segments.length===4&&p.segments.every(s=>s.Cp===r[s.id].Cp);});
     test('Plot uses actual x/c intersection for unequal angles',()=>{const r=run({}),p=pressureDistribution(r);return p.xMid!==.5&&p.segments.filter(s=>s.id[1]==='F').every(s=>s.x0===0&&s.x1===p.xMid)&&p.segments.filter(s=>s.id[1]==='R').every(s=>s.x0===p.xMid&&s.x1===1);});
-    test('Unavailable panels are absent from the pressure plot',()=>{const r=run({MInf:1.5,alpha:AERO402.rad(10),deltaL:AERO402.rad(5)}),p=pressureDistribution(r);return !p.complete&&p.segments.length===2&&p.missing.join(',')==='UF,UR';});
+    test('Unavailable panels are absent from the pressure plot',()=>{const r=run({MInf:1.5,alpha:AERO402.rad(10),deltaL:AERO402.rad(5)}),p=pressureDistribution(r);return !p.complete&&p.segments.length===2&&p.missing.join(',')==='LF,LR';});
     test('Invalid input clears plot data',()=>pressureDistribution(run({MInf:1})).segments.length===0);
     test('Shock rays use upstream flow angle and local beta',()=>{const r=run({});return waveDirections(r.waves.UF,'upper')[0]===r.waves.UF.phi1+r.waves.UF.beta&&waveDirections(r.waves.LF,'lower')[0]===r.waves.LF.phi1-r.waves.LF.beta;});
     test('Expansion fan uses initial and final Mach angles',()=>{const r=run({}),w=r.waves.UR,rays=waveDirections(w,'upper');return rays.length===7&&Math.abs(rays[0]-w.phi1-Math.asin(1/w.M1))<1e-12&&Math.abs(rays[6]-w.phi2-Math.asin(1/w.M2))<1e-12;});
-    test('No-wave corner has no drawn wave ray',()=>waveDirections(run({alpha:AERO402.rad(10)}).waves.LF,'lower').length===0);
-    test('Error corner has no drawn wave ray',()=>waveDirections(run({MInf:1.5,deltaL:AERO402.rad(15)}).waves.UF,'upper').length===0);
+    test('No-wave corner has no drawn wave ray',()=>waveDirections(run({alpha:AERO402.rad(10)}).waves.UF,'upper').length===0);
+    test('Error corner has no drawn wave ray',()=>waveDirections(run({MInf:1.5,deltaL:AERO402.rad(15)}).waves.LF,'lower').length===0);
     return {passed:checks.every(c=>c.passed),total:checks.length,passedCount:checks.filter(c=>c.passed).length,checks};
   }
   return Object.freeze({pressureDistribution,waveDirections,boundaryChecks,runTests});

@@ -49,7 +49,7 @@
     </section>
     <section class="card analysis-main" aria-labelledby="diagramTitle">
       <div class="section-heading"><h2 id="diagramTitle">Wave-Pattern Visualization</h2><span class="section-tag">02</span></div>
-      <p class="note">Body-fixed geometry · φ∞ = −α · select a panel to inspect its wave.</p>
+      <p class="note">Body-fixed geometry · φ∞ = +α · select a panel to inspect its wave.</p>
       <div class="diagram-scroll" tabindex="0" aria-label="Scrollable wave schematic">
         <svg id="diagram" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 650" role="group" aria-label="Interactive diamond-wedge geometry and local wave pattern"></svg>
       </div>
@@ -101,12 +101,12 @@
         <div><h3>Supported inputs</h3><p>M∞: 1.5–5.0<br>α: −10° to +10°<br>δL, δT: 2°–15°<br>p∞ &gt; 0 Pa; c &gt; 0 m; γ &gt; 1<br>Current γ: <strong id="currentGamma">1.4000</strong></p></div>
         <div><h3>Numerical controls</h3><p>Root tolerance: <span id="rootTolerance">10⁻¹⁰ rad</span><br>Maximum iterations: <span id="maxIterations">200</span><br>Zero-turn tolerance: 10⁻⁹ rad<br>Near-zero denominator tolerance: 10⁻¹⁴<br>Near-zero CD tolerance: 10⁻¹⁰</p></div>
       </div>
-      <p class="note">Body coordinates: +x from leading to trailing edge; +y upward; positive angles counterclockwise. φ∞ = −α. Internally, angles are radians, pressures are Pa, and lengths are m.</p>
+      <p class="note">Body coordinates: +x from leading to trailing edge; +y upward; positive angles counterclockwise. φ∞ = +α. Internally, angles are radians, pressures are Pa, and lengths are m.</p>
       <p class="note">Warning threshold: a compression within 1° below θmax. At equality, the limiting attached root is accepted with a warning; any excess is an error. Expansion requires νtarget &lt; νmax. The existing numerical inversion bracket is 1 ≤ M ≤ 100, separate from the supported freestream range; a target beyond this bracket produces an explicit numerical error.</p>
       <p class="note">Errors block dependent results. Warnings preserve otherwise valid calculations. No values are silently clamped, and unavailable states are not replaced by freestream values or zeros.</p>
 <div class="detail-block"><details><summary>Engineering model & equation traceability</summary>
 <p>Team specification: steady, two-dimensional, inviscid flow of a calorically perfect gas with constant γ; a sharp diamond wedge; supersonic freestream; shock–expansion theory; pressure forces only. Viscous and skin-friction drag are neglected.</p>
-<p>Body coordinates: +x from leading edge to trailing edge, +y upward, positive angles counterclockwise. Keep φ∞ = −α; UF = +δL, UR = −δT, LF = −δL, LR = +δT. The upper and lower sequences are independent; each rear panel receives its front panel's downstream state. Positive upper turns and negative lower turns are compression.</p>
+<p>Body coordinates: +x from leading edge to trailing edge, +y upward, positive angles counterclockwise. Keep φ∞ = +α; UF = +δL, UR = −δT, LF = −δL, LR = +δT. The upper and lower sequences are independent; each rear panel receives its front panel's downstream state. Positive upper turns and negative lower turns are compression.</p>
 <div class="tablewrap"><table class="trace-table"><thead><tr><th>Model element</th><th>Established equation / convention</th><th>Source functions</th></tr></thead><tbody>
 <tr><td>Geometry</td><td>Front and rear panel lines intersect at x tan δL = (c − x) tan δT. Tangent and outward unit normal come from each panel's endpoints.</td><td><code>buildGeometry</code></td></tr>
 <tr><td>Oblique shock</td><td>tan θ = 2 cot β (M₁² sin²β − 1) / [M₁²(γ + cos 2β) + 2]. The weak root lies between μ = asin(1/M₁) and β at θmax.</td><td><code>thetaFromBeta</code>, <code>findThetaMax</code>, <code>checkAttachedShock</code></td></tr>
